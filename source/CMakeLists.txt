@@ -100,7 +100,9 @@ if (MPI)
       pFUnit.F90
       )
   add_library(pfunit STATIC ${srcs} ${mpi_srcs})
-  set_source_files_properties(MpiContext.F90 PROPERTIES COMPILE_FLAGS ${MISMATCH})
+  if (MISMATCH)
+    set_source_files_properties(MpiContext.F90 PROPERTIES COMPILE_FLAGS ${MISMATCH})
+  endif ()
 
   install (TARGETS pfunit DESTINATION lib)
   if (BUILD_SHARED)
