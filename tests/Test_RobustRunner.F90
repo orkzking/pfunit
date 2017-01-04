@@ -36,7 +36,7 @@ contains
       use TestMethod_mod, only: newTestMethod
       type (TestSuite) :: suite
 
-      suite = newTestSuite('StringConversionUtilities')
+      suite = newTestSuite('RobustRunner')
 !#define ADD(method) call suite%addTest(newTestMethod(REFLECT(method)))
 
       call suite%addTest( &
@@ -59,7 +59,7 @@ contains
       type (TestSuite) :: suite
       type (TestResult) :: result
       !mlr -problem on intel 13- type (ListenerPointer) :: listeners1(1)
-      type (ListenerPointer), allocatable :: listeners1(:)
+      type (ListenerPointer), target, allocatable :: listeners1(:)
       ! class (ListenerPointer), allocatable :: listeners1(:)
 
       integer :: unit

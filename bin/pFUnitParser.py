@@ -126,6 +126,11 @@ class AtTest(Action):
                 ifndef = matchIfndef.groups()[0]
                 method['ifndef'] = ifndef
 
+            matchType = re.match('.*type\s*=\s*(\w+)', options.groups()[0], re.IGNORECASE)
+            if matchType:
+                print ('Type', matchType.groups()[0])
+                method['type'] = matchType.groups()[0]
+
             paramOption = re.search('testParameters\s*=\s*[{](.*)[}]', options.groups()[0], re.IGNORECASE)
             if paramOption:
                 paramExpr = paramOption.groups()[0]
@@ -176,8 +181,7 @@ class AtTestCase(Action):
             value = re.search('npes\s*=\s*\\[([0-9,\s]+)\\]', options.groups()[0], re.IGNORECASE)
             if value:
                 npesString = value.groups()[0]
-
-                npes = map(int, npesString.split(','))
+                npes = map(int,npesString.split(','))
                 self.parser.userTestCase['npRequests'] = npes
 
             value = re.search('cases\s*=\s*(\\[[0-9,\s]+\\])', options.groups()[0], re.IGNORECASE)
@@ -683,8 +687,6 @@ class Parser():
                 self.outputFile.write('   external ' + self.userTestCase['tearDown'] + '\n')
             self.outputFile.write('\n')
 
-        self.outputFile.write('   integer, allocatable :: npes(:)\n\n')
-
         if 'testParameterType' in self.userTestCase:
             type = self.userTestCase['testParameterType']
             self.printParameterHeader(type)
@@ -721,7 +723,12 @@ class Parser():
         elif 'tearDown' in self.userTestCase:
             args += ', ' + self.userTestCase['tearDown']
 
-        self.outputFile.write('   call suite%addTest(newTestMethod(' + args + '))\n')
+        if 'type' in testMethod:
+            type =  testMethod['type']
+        else:
+            type = 'newTestMethod'
+
+        self.outputFile.write('   call suite%addTest(' + type + '(' + args + '))\n')
 
     def addMpiTestMethod(self, testMethod):
         for npes in testMethod['npRequests']:
@@ -736,7 +743,13 @@ class Parser():
             elif 'tearDown' in self.userTestCase:
                 args += ', ' + self.userTestCase['tearDown']
 
-            self.outputFile.write('   call suite%addTest(newMpiTestMethod(' + args + '))\n')
+            if 'type' in testMethod:
+                type =  testMethod['type']
+            else:
+                type = 'newMpiTestMethod'
+                    
+            self.outputFile.write('   call suite%addTest(' + type + '(' + args + '))\n')
+
     
     def addUserTestMethod(self, testMethod):
 

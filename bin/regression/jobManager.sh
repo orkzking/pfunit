@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --account=k3002
 #SBATCH --job-name=pFUnit
-#SBATCH --time=01:00:00
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=16
+#SBATCH --time=02:00:00
+#SBATCH --ntasks=16
+#SBATCH --constraint=hasw
 
 # This script manages the jobs in a batch environment.
 # It gets called from mainRegress.sh.
@@ -41,40 +41,48 @@ function setModule {
    moduleList=''
    moduleMPI=''
    
+   export PATH=/usr/local/other/SSSO_Ana-PyD/2.1.0/bin/python:$PATH
    if [ "$fortranCompiler" == "INTEL" ]; then
       if [ "$version" == "13.1" ]; then
          moduleFortran='comp/intel-13.1.3.192'
       elif [ "$version" == "13.0" ]; then
          moduleFortran='comp/intel-13.0.1.117'
       elif [ "$version" == "14.0" ]; then
-         moduleFortran='comp/intel-14.0.2.144'
+         moduleFortran='comp/intel-14.0.3.174'
+      elif [ "$version" == "15.0" ]; then
+         moduleFortran='comp/intel-15.0.3.187'
       else
          msg="$fortranCompiler version $version is not supported yet"
          echo -e "$msg\n\n" >> $DebugLog
       fi
       if [[ "$parallel" == "mpi" || "$parallel" == "hybrid" ]]; then
-         moduleMPI=' mpi/impi-4.1.3.048'
+         moduleMPI=' mpi/impi-5.0.3.048'
       fi
    elif [ "$fortranCompiler" == "PGI" ]; then
-      moduleFortran='comp/pgi-14.3.0'
+      moduleFortran='comp/pgi-15.9.0'
       if [[ "$parallel" == "mpi"  || "$parallel" == "hybrid" ]]; then
-         moduleMPI=' other/mpi/openmpi/1.7.4-pgi-14.3.0'
+         moduleMPI=' other/mpi/openmpi/1.10.0-pgi-15.9.0'
       fi
    elif [ "$fortranCompiler" == "NAG" ]; then
-      moduleFortran='comp/nag-5.3'
+      moduleFortran='comp/nag-6.0'
       if [[ "$parallel" == "mpi"  || "$parallel" == "hybrid" ]]; then
-         moduleMPI=' other/mpi/openmpi/1.7.3-nag-5.3'
+         moduleMPI=' other/mpi/openmpi/1.8.1-nag-6.0'
       fi
    elif [ "$fortranCompiler" == "GNU" ]; then
-      if [ "$version" == "4.9.0" ]; then
-         moduleFortran='other/comp/gcc-4.9.0'
+      if [ "$version" == "4.9.1" ]; then
+         moduleFortran='other/comp/gcc-4.9.1'
          if [[ "$parallel" == "mpi"  || "$parallel" == "hybrid" ]]; then
-           moduleMPI=' other/mpi/openmpi/1.7.3-gcc-4.9.0'
+           moduleMPI=' other/mpi/openmpi/1.8.1-gcc-4.9.1'
          fi
       elif [ "$version" == "4.8.1" ]; then
          moduleFortran='other/comp/gcc-4.8.1'
          if [[ "$parallel" == "mpi"  || "$parallel" == "hybrid" ]]; then
            moduleMPI=' other/mpi/openmpi/1.7.2-gcc-4.8.1-shared'
+         fi
+      elif [ "$version" == "5.2" ]; then
+         moduleFortran='other/comp/gcc-5.2-sp3'
+         if [[ "$parallel" == "mpi"  || "$parallel" == "hybrid" ]]; then
+           moduleMPI=' other/mpi/openmpi/1.8.7-gcc-5.2-sp3'
          fi
       else
          msg="$fortranCompiler version $version is not supported yet"
@@ -83,7 +91,7 @@ function setModule {
    else
       abortNotify "$fortranCompiler is not supported yet"
    fi
-   moduleList="other/cmake-2.8.11.2 $moduleFortran $moduleMPI"
+   moduleList="other/cmake-3.2.3 $moduleFortran $moduleMPI"
 
    module purge
    if [ -n "$moduleList" ]; then  
@@ -93,7 +101,6 @@ function setModule {
       fi
    fi
    echo " -- module list: "$moduleList
-   export PATH=/usr/local/other/SLES11/SIVO-PyD/1.9.0/bin:$PATH
 }
 
 function doMake {
@@ -146,14 +153,14 @@ function doMake {
      echo " -- cmake -DMPI=$USEMPI -DOPENMP=$USEOPENMP ../"
      cmake -DMPI=$USEMPI -DOPENMP=$USEOPENMP ../ 1> $makeLog 2>&1
      echo " -- $MAKE all"
-     $MAKE -j 8 all 1>> $makeLog 2>&1
+     $MAKE -j all 1>> $makeLog 2>&1
      echo " - Parse for build errors..." 
      buildErrorFile "$makeLog"
      BUILDOK=$?
      echo " --- bld RC = $BUILDOK"
      if [ "$BUILDOK" == "$OK" ]; then
        echo " -- $MAKE tests"
-       $MAKE -j 8 tests 1>> $makeLog 2>&1
+       $MAKE -j tests 1>> $makeLog 2>&1
        echo " - Parse for runtime errors..." 
        runError "$makeLog"
        RUNOK=$?
@@ -172,14 +179,14 @@ function doMake {
    else
      $MAKE --quiet distclean F90_VENDOR=$COM 1> $makeLog 2>&1
      echo " -- $MAKE all F90_VENDOR=$COM MPI=$USEMPI OPENMP=$USEOPENMP"
-     $MAKE -j 8 all F90_VENDOR=$COM MPI=$USEMPI OPENMP=$USEOPENMP 1> $makeLog 2>&1
+     $MAKE -j all F90_VENDOR=$COM MPI=$USEMPI OPENMP=$USEOPENMP 1> $makeLog 2>&1
      echo " - Parse for build errors..." 
      buildErrorFile "$makeLog"
      BUILDOK=$?
      echo " --- bld RC = $BUILDOK"
      if [ "$BUILDOK" == "$OK" ]; then
        echo " -- $MAKE tests F90_VENDOR=$COM MPI=$USEMPI OPENMP=$USEOPENMP"
-       $MAKE -j 8 tests F90_VENDOR=$COM MPI=$USEMPI OPENMP=$USEOPENMP 1> $makeLog 2>&1
+       $MAKE -j tests F90_VENDOR=$COM MPI=$USEMPI OPENMP=$USEOPENMP 1> $makeLog 2>&1
        echo " - Parse for runtime errors..." 
        runError "$makeLog"
        RUNOK=$?
@@ -302,16 +309,17 @@ declare -a INTEL_VERSIONS
 MAKE_TYPE=(cmake gmake)
 
 # Three compilers
-COMPILERS=(INTEL GNU NAG)
+COMPILERS=(INTEL GNU NAG PGI)
 
 # Compiler versions are separated into those that work
 # with pfunit_2.1.0 and those that work with the master,
 # development and release-3.0 branches.
-INTEL_VERSIONS_master=(13.1 14.0)
+INTEL_VERSIONS_master=(13.1 14.0 15.0)
 INTEL_VERSIONS_2_1_0=(13.0 13.1 14.0)
-GNU_VERSIONS_master=(4.9.0)
-GNU_VERSIONS_2_1_0=(4.8.1 4.9.0)
-NAG_VERSIONS=(5.3)
+GNU_VERSIONS_master=(4.9.1 5.2)
+GNU_VERSIONS_2_1_0=(4.8.1 4.9.1)
+NAG_VERSIONS=(6.0)
+PGI_VERSIONS=(15.9.0)
 
 # serial, mpi, omp, omp+mpi
 PARALLEL=(off mpi omp hybrid)
@@ -341,6 +349,8 @@ for eachMake in "${MAKE_TYPE[@]}"; do
       F90_VERSIONS=( "${GNU_VERSIONS[@]}" )
     elif [ "$eachFC" == "NAG" ]; then 
       F90_VERSIONS=( "${NAG_VERSIONS[@]}" )
+    elif [ "$eachFC" == "PGI" ]; then 
+      F90_VERSIONS=( "${PGI_VERSIONS[@]}" )
     fi
 
     for version in "${F90_VERSIONS[@]}"; do

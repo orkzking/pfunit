@@ -42,7 +42,7 @@ module TestResult_mod
       integer :: numFailed = 0
       integer :: numErrors = 0
       integer :: numRun = 0
-      integer :: numSuccesses
+      integer :: numSuccesses = 0
       real    :: runTime
       type (ListenerPointer), allocatable :: listeners(:)
       type (TestFailure), allocatable :: failures(:)
@@ -213,6 +213,7 @@ contains
       do i = 1, size(this%listeners)
          call this%listeners(i)%pListener%endTest(aTest%getName())
       end do
+
    end subroutine endTest
 
    integer function runCount(this)
@@ -227,8 +228,6 @@ contains
       class (TestResult), intent(inout) :: this
       class (SurrogateTestCase) :: test 
       class (ParallelContext), intent(in) :: context
-
-!      type (Exception) :: anException
 
       if (context%isRootProcess()) call this%startTest(test)
 

@@ -137,7 +137,7 @@ contains
       use ParallelContext_mod
 
       type (TestResult) :: result
-      class (RobustRunner), intent(inout) :: this
+      class (RobustRunner), target, intent(inout) :: this
       class (Test), intent(inout) :: aTest
       class (ParallelContext), intent(in) :: context
 
@@ -154,7 +154,7 @@ contains
       use RemoteProxyTestCase_mod
       use TestSuite_mod
       use Exception_mod
-      class (RobustRunner), intent(inout) :: this
+      class (RobustRunner), target, intent(inout) :: this
       class (Test), intent(inout) :: aTest
       class (ParallelContext), intent(in) :: context
       type (TestResult), intent(inout) :: result
@@ -180,7 +180,8 @@ contains
          call aTest%getTestCases(testCases)
 #endif
       class is (TestCase)
-         testCases = [TestCaseReference(aTest)]
+         allocate(testCases(1))
+         allocate(testCases(1)%test, source= aTest)
       class default
          stop
       end select

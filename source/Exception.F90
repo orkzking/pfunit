@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-! NASA/GSFC Advanced Software Technology Group
+! NASA/GSFC, Software Integration & Visualization Office, Code 610.3
 !-------------------------------------------------------------------------------
 !  MODULE: PrivateException
 !
@@ -7,17 +7,17 @@
 !! <BriefDescription>
 !!
 !! @author
-!! Tom Clune, NASA/GSFC 
+!! Tom Clune,  NASA/GSFC
 !!
 !! @date
 !! 07 Nov 2013
-!! 
+!!
 !! @note <A note here.>
 !! <Or starting here...>
 !
 ! REVISION HISTORY:
 !
-! 07 Nov 2013 - Added the prologue for the compliance with Doxygen. 
+! 07 Nov 2013 - Added the prologue for the compliance with Doxygen.
 !
 !-------------------------------------------------------------------------------
 module PrivateException_mod
@@ -37,7 +37,7 @@ module PrivateException_mod
    public :: UNKNOWN_FILE_NAME
 
    integer, parameter :: MAXLEN_MESSAGE = 80*15
-   integer, parameter :: MAXLEN_FILE_NAME = 80
+   integer, parameter :: MAXLEN_FILE_NAME = 255
    character(len=*), parameter :: NULL_MESSAGE = ''
 
    type Exception
@@ -56,7 +56,7 @@ module PrivateException_mod
    type ExceptionList
       type (Exception), allocatable :: exceptions(:)
    contains
-      
+
       procedure :: getNumExceptions
 
       procedure :: catch_any
@@ -112,23 +112,26 @@ contains
       message = trim(this%message)
    end function getMessage
 
-   integer function getLineNumber(this) 
+   integer function getLineNumber(this)
       class (Exception), intent(in) :: this
       getLineNumber = this%location%lineNumber
    end function getLineNumber
 
-   character(len=MAXLEN_FILE_NAME) function getFileName(this) 
+   character(len=MAXLEN_FILE_NAME) function getFileName(this)
       class (Exception), intent(in) :: this
       getFileName = trim(this%location%fileName)
    end function getFileName
 
-   logical function isNull(this) 
+   logical function isNull(this)
       class (Exception), intent(in) :: this
       isNull = this%nullFlag
    end function isNull
 
    function newExceptionList() result(list)
       type (ExceptionList) :: list
+      if (allocated(list%exceptions)) then
+         deallocate(list%exceptions)
+      end if
       allocate(list%exceptions(0))
    end function newExceptionList
 
@@ -191,12 +194,13 @@ contains
 !      character(len=MAXLEN_MESSAGE) :: msg
       integer :: i
 
+
       globalExceptionCount = context%sum(size(this%exceptions))
 
       if (globalExceptionCount > 0) then
 
          allocate(list%exceptions(globalExceptionCount))
-         
+
          do i = 1, this%getNumExceptions()
             call context%labelProcess(this%exceptions(i)%message)
          end do
@@ -213,7 +217,7 @@ contains
          call context%gatherString(this%exceptions(:)%message, list%exceptions(:)%message)
 #endif
          call clearAll(this)
-      
+
          if (context%isRootProcess()) then
             deallocate(this%exceptions)
             allocate(this%exceptions(globalExceptionCount))
@@ -240,7 +244,7 @@ contains
 
    end function anyExceptions
 
-   ! Fortran does not require "short-circuit" so be careful with 
+   ! Fortran does not require "short-circuit" so be careful with
    ! evaluation of optional arguments.
    logical function preserveMessage(preserve)
       logical, optional, intent(in) :: preserve
@@ -272,7 +276,7 @@ contains
 
    end subroutine deleteIthException
 
-   logical function catch_any(this, preserve) 
+   logical function catch_any(this, preserve)
       class (ExceptionList), intent(inOut) :: this
       logical, optional, intent(in) :: preserve
 
@@ -293,7 +297,7 @@ contains
 
    end function catch_any
 
-   logical function catch_message(this, message, preserve) 
+   logical function catch_message(this, message, preserve)
       class (ExceptionList), intent(inOut) :: this
       character(len=*), intent(in) :: message
       logical, optional, intent(in) :: preserve
@@ -322,7 +326,7 @@ contains
 
       call move_alloc(from=this%exceptions, to=exceptions)
       allocate(this%exceptions(0))
-      
+
    end function getExceptions
 
    subroutine clearAll(this)
@@ -372,7 +376,9 @@ module Exception_mod
 
    public :: initializeGlobalExceptionList
 
-   type (ExceptionList) :: globalExceptionList ! private
+   type (ExceptionList), save :: globalExceptionList ! private
+   logical, save :: init = .false. ! private
+
 
   interface throw
     module procedure throw_message
@@ -400,8 +406,9 @@ contains
 
    integer function getNumExceptions_local() result(numExceptions)
 
-      if (.not. allocated(globalExceptionList%exceptions)) then
+      if (.not. init) then
          call initializeGlobalExceptionList()
+         init = .true.
       end if
 
       numExceptions = globalExceptionList%getNumExceptions()
@@ -412,8 +419,10 @@ contains
       type (SourceLocation), optional, intent(in) :: location
 
       !$omp critical
-      if (.not. allocated(globalExceptionList%exceptions)) then
+      if (.not. init) then
+         init = .true.
          call initializeGlobalExceptionList()
+         !$omp flush(init)
       end if
 
 #ifndef Cray
@@ -464,8 +473,12 @@ contains
       if (.not. allocated(globalExceptionList%exceptions)) then
          call initializeGlobalExceptionList()
       end if
-
+#ifdef INTEL_16
+      call move_alloc(from=globalExceptionList%exceptions, to=exceptions)
+#else
       exceptions = globalExceptionList%getExceptions()
+#endif
+         
    end function getExceptions
 
    logical function noExceptions()

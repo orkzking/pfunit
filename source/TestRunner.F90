@@ -58,16 +58,7 @@ contains
    function newTestRunner_unit(extListeners) result(runner)
       type(ListenerPointer), intent(in) :: extListeners(:)
       type (TestRunner) :: runner
-#ifdef PGI
-        ! PGI Work around F2003 sourced allocation bug below
-        integer i
-        allocate(runner%extListeners(size(extListeners)))
-        do i=1,size(runner%extListeners)
-          runner%extListeners(i) = extListeners(i)
-        enddo
-#else
       allocate(runner%extListeners(size(extListeners)), source=extListeners)
-#endif
    end function newTestRunner_unit
 
    function createTestResult(this) result(tstResult)
@@ -87,7 +78,7 @@ contains
       use ParallelContext_mod
 
       type (TestResult) :: result
-      class (TestRunner), intent(inout) :: this
+      class (TestRunner), target, intent(inout) :: this
       class (Test), intent(inout) :: aTest
       class (ParallelContext), intent(in) :: context
       

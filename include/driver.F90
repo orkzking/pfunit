@@ -14,11 +14,7 @@ program main
 
    integer :: i
    character(len=:), allocatable :: executable
-   character(len=:), allocatable :: fullExecutable
    character(len=:), allocatable :: argument
-   character(len=:), allocatable :: maxTimeoutDuration_
-   character(len=:), allocatable :: maxLaunchDuration_
-   integer :: length
 
    real :: maxTimeoutDuration
    real :: maxLaunchDuration
@@ -42,6 +38,9 @@ program main
    class (ListenerPointer), allocatable :: listeners(:)
    type (DebugListener) :: debugger
    character(len=128) :: suiteName
+   character(len=128) :: maxTimeoutDuration_
+   character(len=128) :: maxLaunchDuration_
+   character(len=128) :: fullExecutable
 
 ! Support for the runs
    class (ParallelContext), allocatable :: context
@@ -59,7 +58,6 @@ program main
    numListeners = 1; iListener = 0
 
    executable = getCommandLineArgument(0)
-!   allocate(character(len=length+30) :: fullExecutable)
 
    outputUnit = OUTPUT_UNIT ! stdout unless modified below
 
@@ -104,7 +102,7 @@ program main
 #ifdef BUILD_ROBUST
          i = i+1; if (i>numArguments) call commandLineArgumentError()
          maxTimeoutDuration_ = getCommandLineArgument(i)
-         read(maxTimeoutDuration_,*)maxTimeoutDuration
+         read(maxTimeoutDuration_,*) maxTimeoutDuration
 #else
          ! TODO: This should be a failing test.
          write (*,*) 'Robust runner not built.'
@@ -325,6 +323,9 @@ contains
       write(OUTPUT_UNIT,*)"   '-max-launch-duration  <duration>' : Limit detection time for robust"
       write(OUTPUT_UNIT,*)"   '-skip n'         : used by remote start with 'robust' internally"
       write(OUTPUT_UNIT,*)"                       This flag should NOT be used directly by users."
+      write(OUTPUT_UNIT,*)"   '-xml <file>'     : output JUnit XML to specified file"
+      write(OUTPUT_UNIT,*)"                       XML can be used with e.g. Jenkins."
+      write(OUTPUT_UNIT,*)"   '-name <name>'    : give tests an identifying name in XML output"
       write(OUTPUT_UNIT,*)" "
 
    end subroutine printHelpMessage

@@ -34,8 +34,11 @@ module Test_XmlPrinter_mod
 contains
 
    function suite()
-      use TestSuite_mod, only: TestSuite, newTestSuite
+      use TestCase_mod
       use TestMethod_mod, only: newTestMethod
+      use Test_mod
+      use TestResult_mod
+      use TestSuite_mod, only: TestSuite, newTestSuite
       type (TestSuite) :: suite
 
       suite = newTestSuite('TestXmlPrinterSuite')
@@ -51,29 +54,30 @@ contains
    subroutine testValidXml()
       use Assert_mod, only: assertEqual
       use Exception_mod, only: newException
+      use TestCase_mod
       use SimpleTestCase_mod, only: SimpleTestCase
       use SurrogateTestCase_mod
-      use TestCase_mod
-      use XmlPrinter_mod, only: XmlPrinter, newXmlPrinter
       use TestResult_mod, only: TestResult, newTestResult
+      use XmlPrinter_mod, only: XmlPrinter, newXmlPrinter
 
 #ifdef Intel
       use ifport, only: system
-#elif PGI
-        interface
-        extrinsic (f77_local) integer function system(str)
-!pgi$   l3f system
-        character*(*), intent(in) :: str
-        end function
-        end interface
 #endif
 
       type (TestResult) :: aResult
-      type (SimpleTestCase) :: aTest, aTest2
+      type (SimpleTestCase), target :: aTest, aTest2
       type (XmlPrinter) :: printer
       integer :: iostat, stat, cstat, xmlUnit, outUnit
       character(len=200) :: fileName, suiteName, command, &
            xsdPath, outFile, errMsg
+
+#ifdef PGI
+      interface
+         integer function system(str) bind(c)
+            character(len=*), intent(in) :: str
+         end function system
+      end interface
+#endif
 
       fileName = 'test.xml'
       suiteName = 'suitename<<>>""'

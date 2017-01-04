@@ -89,7 +89,7 @@ contains
       ! safely stopped.
 
       write(timeCommand,'(a, f10.3,a,i0,a)') &
-           & "(sleep ",this%maxTimeoutDuration,"; kill -9 ", this%process%getPid(),") > /dev/null 2>&1"
+           & "(sleep ",this%maxTimeoutDuration," && kill -9 ", this%process%getPid(),") > /dev/null 2>&1"
       timerProcess = UnixProcess(trim(timeCommand), runInBackground=.true.)
 
       do
@@ -143,7 +143,12 @@ contains
 
          else ! have some output to process
 
-! MLR Need to check on length of line.
+            ! MLR Need to check on length of line.
+
+            if (line(1:6) == 'DEBUG:' .or. line(1:7) == ' DEBUG:') then
+               print*,line ! re-emit
+               cycle
+            end if
 
             if (line == ('ended: ' // trim(this%getName()))) then
 
@@ -152,7 +157,7 @@ contains
 
 ! 2014-0211-1843-18-UTC MLR Huh?  Hard coding? Getting two errors here... Both Intel & GNU.
 ! It turns out that printing from processes can screw up the communications that go on here.
-            elseif (line(1:22) == 'failed: numExceptions=') then
+            elseif (index(line, 'failed: numExceptions=') /= 0) then
 
                read(line(23:),*) numExceptions
 
@@ -176,7 +181,7 @@ contains
                cycle ! still need to process the end message
 
             else
-
+               print*,'Unexpected output in remote runner: <',line,'>'
                call timerProcess%terminate()
                call this%process%terminate()
                call throw('ERROR: unexpected message: '//trim(line))

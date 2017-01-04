@@ -6,7 +6,7 @@ include_directories(${CMAKE_BINARY_DIR}/mod)
 
 configure_file( junit-4.xsd junit-4.xsd COPYONLY )
 
-set(OTHER_SOURCES MakeNaN.F90 MakeInfinity.F90 MockListener.F90)  
+set(OTHER_SOURCES MakeNaN.F90 MakeInfinity.F90 MockListener.F90)
 list(APPEND OTHER_SOURCES BrokenTestCase.F90 BrokenSetUpCase.F90)
 list(APPEND OTHER_SOURCES FixtureTestCase.F90)
 
@@ -51,6 +51,11 @@ target_link_libraries(testpfunit pfunit)
 set(TEST_EXE tests.x)
 
 add_executable (${TEST_EXE} selfTests.F90)
+add_test (NAME pfunit_tests COMMAND ${TEST_EXE}
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+set_property (TEST pfunit_tests
+    PROPERTY FAIL_REGULAR_EXPRESSION "Encountered 1 or more failures/errors during testing"
+    )
 
 add_dependencies(tests.x pfunit)
 
@@ -58,6 +63,13 @@ target_link_libraries(${TEST_EXE} pfunit testpfunit)
 
 if (MPI)
   target_link_libraries(${TEST_EXE} ${MPI_Fortran_LIBRARIES} )
+
+# Fix for openmpi 1.8.8 which complains about forking due to selftests of
+# robust runner.
+  if (MPIEXEC MATCHES ".*openmpi/1.8.8/.*")
+    set (MPIEXEC_PREFLAGS ${MPIEXEC_PREFLAGS} --mca mpi_warn_on_fork 0)
+  endif ()
+
   if (MPI_USE_MPIEXEC)
     #
     # Add the target for executing the tests by calling on CMake's FindMPI to find the
@@ -68,8 +80,8 @@ if (MPI)
   else()
     #
     # Add the target for executing the tests with a hardcoded call to mpirun.
-    # 
-    add_custom_target(tests COMMAND mpirun -np 4 tests/${TEST_EXE} DEPENDS ${TEST_EXE} WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+    #
+    add_custom_target(tests COMMAND mpirun ${MPIEXEC_PREFLAGS} -np 4 tests/${TEST_EXE} DEPENDS ${TEST_EXE} WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
     #
   endif()
 #
