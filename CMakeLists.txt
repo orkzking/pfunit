@@ -161,6 +161,11 @@ elseif(${CMAKE_Fortran_COMPILER_ID} STREQUAL PGI)
 
 elseif(${CMAKE_Fortran_COMPILER_ID} STREQUAL "Cray")
 
+    # Use the C compiler as a proxy for the Fortran compiler version (won't necessarily work with other compilers, e.g. NAG)
+    if(CMAKE_C_COMPILER_VERSION VERSION_GREATER 8.4.5)
+      message( FATAL_ERROR "Cray compiler version number ${CMAKE_C_COMPILER_VERSION} < 8.4.6 minimum" )
+    endif()
+
     # Use ftn (Cray wrapper)
     add_definitions(-DCray)
     add_definitions(-DSTRINGIFY_SIMPLE)
